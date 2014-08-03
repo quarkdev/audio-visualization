@@ -28,13 +28,13 @@
             position: fixed;
             right: 50px;
             font-family: Arial, sans-serif;
-            padding: 8px;
-            background-color: rgba(255, 0, 0, 0.75);
+            padding: 6px;
+            background-color: rgba(255, 0, 0, 0.50);
             color: #fff;
             cursor: pointer;
             z-index: 10;
             transition: all 0.2s;
-            font-size: 12px;
+            font-size: 10px;
         }
         
         #select-audio:hover {
@@ -70,7 +70,7 @@
                 // render frame based on values in frequencyData
                 // for the sake of simplicity, we're using dom elements instead of canvas manipulation
                 for (var i = 0; i < 256; i++) {
-                    bars[i].style.width = frequencyData[i];
+                    bars[i].style.width = window.innerWidth * (frequencyData[i]/255);
                 }
             }
             
