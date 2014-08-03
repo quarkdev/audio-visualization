@@ -1,0 +1,109 @@
+<html>
+<head>
+    <style type="text/css">
+        * {
+            border: 0;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .bar {
+            display: block;
+            height: calc(100% / 255);
+            width: 100%;
+            background-color: red;
+        }
+       
+        #bar-container {
+            height: 100%;
+            position: fixed;
+        }
+        
+        #media-src-overlay {
+            width: 250px;
+            height: 250px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            margin-left: -125px;
+            margin-top: -125px;
+        }
+    </style>
+
+    <script type="text/javascript">
+        var bars, renderFrame;
+    
+        window.onload = function() {
+            var ctx = new AudioContext();
+            var audio = document.getElementById('audio');
+            var audioSrc = ctx.createMediaElementSource(audio);
+            var analyser = ctx.createAnalyser();
+            
+            // we have to connect the MediaElementSource with the analyser 
+            audioSrc.connect(analyser);
+            // then connect it to the audio destination
+            audioSrc.connect(ctx.destination);
+            
+            // we could configure the analyser: e.g. analyser.fftSize (for further infos read the spec)
+
+            // frequencyBinCount tells you how many values you'll receive from the analyser
+            var frequencyData = new Uint8Array(analyser.frequencyBinCount);
+
+            // we're ready to receive some data!
+            // loop
+            renderFrame = function () {
+                requestAnimationFrame(renderFrame);
+                // update data in frequencyData
+                analyser.getByteFrequencyData(frequencyData);
+                // render frame based on values in frequencyData
+                // for the sake of simplicity, we're using dom elements instead of canvas manipulation
+                for (var i = 0; i < 255; i++) {
+                    bars[i].style.width = frequencyData[i];
+                }
+            }
+            
+            // loads the bar(div) elements to be manipulated
+            function loadBarElements() {
+                var barstr = '';
+                for (var i = 0; i < 255; i++) {
+                    barstr += '<div id="' + i + '" class="bar" style="background-color: rgb('+ i +', '+ (255 - i) +', '+ 255 +')"></div>';
+                }
+                
+                document.getElementById('bar-container').innerHTML = barstr;
+            }
+            
+            loadBarElements();
+            bars = document.getElementsByClassName('bar');
+            audio.play();
+            renderFrame();
+        };
+        
+        // change the media source
+        function changeMediaSrc() {
+            var audio = document.getElementById('audio');
+        
+            // stop the current media src
+            audio.pause();
+            
+            // replace the src
+            var reader = new FileReader();
+
+            reader.onload = function (event) {
+                audio.src = event.target.result;
+                
+                // restart the analyser and sound src
+                audio.play();
+            };
+            reader.readAsDataURL(document.getElementById("src-input").files[0]);
+        }
+    </script>
+</head>
+
+<body>
+    <div id="media-src-overlay">
+        <input id="src-input" type="file" onchange="changeMediaSrc()" />
+    </div>
+    <audio id="audio" src="dorchadas.mp3"></audio>
+    <div id="bar-container"></div>
+</body>
+</html>
