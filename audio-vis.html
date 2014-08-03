@@ -57,7 +57,7 @@
                 analyser.getByteFrequencyData(frequencyData);
                 // render frame based on values in frequencyData
                 // for the sake of simplicity, we're using dom elements instead of canvas manipulation
-                for (var i = 0; i < 255; i++) {
+                for (var i = 0; i < 256; i++) {
                     bars[i].style.width = frequencyData[i];
                 }
             }
@@ -65,7 +65,7 @@
             // loads the bar(div) elements to be manipulated
             function loadBarElements() {
                 var barstr = '';
-                for (var i = 0; i < 255; i++) {
+                for (var i = 0; i < 256; i++) {
                     barstr += '<div id="' + i + '" class="bar" style="background-color: rgb('+ i +', '+ (255 - i) +', '+ 255 +')"></div>';
                 }
                 
