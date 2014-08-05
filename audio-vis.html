@@ -13,6 +13,10 @@
             width: 100%;
             background-color: red;
         }
+        
+        .dd-hover {
+            background-color: yellow;
+        }
        
         #bar-container {
             height: 100%;
@@ -84,13 +88,41 @@
                 document.getElementById('bar-container').innerHTML = barstr;
             }
             
+            // attaches drag/drop event to body (for changing src via drag/drop)
+            function attachDragDropEventListeners() {
+                var holder = document.getElementsByTagName('body')[0];
+                var audio = document.getElementById('audio');
+                
+                holder.ondragover = function () { this.className = 'dd-hover'; return false; };
+                holder.ondragend = function () { this.className = ''; return false; };
+                holder.ondrop = function (e) {
+                    this.className = '';
+                    e.preventDefault();
+
+                    var file = e.dataTransfer.files[0],
+                        reader = new FileReader();
+                        
+                    reader.onload = function (event) {                       
+                        audio.src = event.target.result;
+                        
+                        // restart the analyser and sound src
+                        audio.play();
+                    };
+                    
+                    reader.readAsDataURL(file);
+
+                    return false;
+                };
+            }
+            
+            attachDragDropEventListeners()
             loadBarElements();
             bars = document.getElementsByClassName('bar');
             audio.play();
             renderFrame();
         };
         
-        // change the media source
+        // change the media source via file select
         function changeMediaSrc() {
             var audio = document.getElementById('audio');
         
