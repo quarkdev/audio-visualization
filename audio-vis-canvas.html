@@ -18,7 +18,8 @@
             background-color: yellow;
         }
        
-        #bar-container {
+        #viz-canvas {
+            width: 100%;
             height: 100%;
             position: fixed;
             z-index: 1;
@@ -47,13 +48,16 @@
     </style>
 
     <script type="text/javascript">
-        var bars, renderFrame, queue = [];
+        var renderFrame, barH, canvas, canvasCtx;
     
         window.onload = function() {
             var ctx = new AudioContext();
             var audio = document.getElementById('audio');
             var audioSrc = ctx.createMediaElementSource(audio);
             var analyser = ctx.createAnalyser();
+            
+            canvas = document.getElementById('viz-canvas');
+            canvasCtx = canvas.getContext('2d');
             
             // we have to connect the MediaElementSource with the analyser 
             audioSrc.connect(analyser);
@@ -72,21 +76,13 @@
                 // update data in frequencyData
                 analyser.getByteFrequencyData(frequencyData);
                 // render frame based on values in frequencyData
-                // for the sake of simplicity, we're using dom elements instead of canvas manipulation
+                // canvas drawing
+                canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
                 for (var i = 0; i < 256; i++) {
-                    bars[i].style.width = window.innerWidth * (frequencyData[i]/255);
+                    canvasCtx.fillStyle = 'rgb('+i+', '+(255 - i)+', 255)';
+                    canvasCtx.fillRect(0, i * barH, window.innerWidth * (frequencyData[i]/255), barH);
                 }
-            }
-            
-            // loads the bar(div) elements to be manipulated
-            function loadBarElements() {
-                var barstr = '';
-                for (var i = 0; i < 256; i++) {
-                    barstr += '<div id="' + i + '" class="bar" style="background-color: rgb('+ i +', '+ (255 - i) +', '+ 255 +')"></div>';
-                }
-                
-                document.getElementById('bar-container').innerHTML = barstr;
-            }
+            }  
             
             // attaches drag/drop event to body (for changing src via drag/drop)
             function attachDragDropEventListeners() {
@@ -115,12 +111,22 @@
                 };
             }
             
+            resizeCanvas();
             attachDragDropEventListeners()
-            loadBarElements();
-            bars = document.getElementsByClassName('bar');
             audio.play();
             renderFrame();
         };
+        
+        window.onresize = function () {
+            resizeCanvas();
+        };
+        
+        // resize canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            barH = canvas.height / 255;
+        }
         
         // change the media source via file select
         function changeMediaSrc() {
@@ -147,6 +153,6 @@
     <span id="select-audio" onclick="document.getElementById('src-input').click()">SELECT AUDIO</span>
     <input id="src-input" type="file" onchange="changeMediaSrc()" />
     <audio id="audio" src="dorchadas.mp3"></audio>
-    <div id="bar-container"></div>
+    <canvas id="viz-canvas"></canvas>
 </body>
 </html>
