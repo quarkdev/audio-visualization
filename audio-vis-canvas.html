@@ -1,5 +1,7 @@
+<!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8"> 
     <style type="text/css">
         * {
             border: 0;
@@ -45,10 +47,62 @@
         #select-audio:hover {
             background-color: rgba(255, 0, 0, 1.0);
         }
+        
+        #metadata {
+            position: fixed;
+            left: 12px;
+            top: 12px;
+            z-index: 10;
+            font-family: 'Arial Unicode', Arial, sans-serif;
+            font-size: 13px;
+        }
+        
+        #player-controls {
+            position: fixed;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            left:12px;
+            top: 36px;
+            z-index: 10;
+        }
+        
+        #player-controls span {
+            padding: 4px;
+            cursor: pointer;
+        }
+        
+        #player-controls span:hover {
+            color: #fff;
+            background-color: blue;
+        }
+        
+        #pc-playlist {
+            border: 1px solid grey;
+        }
+        
+        #playlist {
+            position: fixed;
+            top: 72px;
+            left: 28px;
+            z-index: 10;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+        
+        .playlist-item {
+            cursor: pointer;
+            padding: 2px 4px;
+            transition: all 0.1s;
+        }
+        
+        .playlist-item:hover {
+            background-color: blue;
+            color: #fff;
+        }
     </style>
-
+    <script type="text/javascript" src="dataview-extra.js"></script>
     <script type="text/javascript">
-        var renderFrame, barH, canvas, canvasCtx;
+        var renderFrame, barH, canvas, canvasCtx, queue = [], current = 0, playing = false;
     
         window.onload = function() {
             var ctx = new AudioContext();
@@ -81,6 +135,9 @@
                 for (var i = 0; i < 256; i++) {
                     canvasCtx.fillStyle = 'rgb('+i+', '+(255 - i)+', 255)';
                     canvasCtx.fillRect(0, i * barH, window.innerWidth * (frequencyData[i]/255), barH);
+                    //canvasCtx.beginPath();
+                    //canvasCtx.arc(window.innerWidth * (frequencyData[i]/255), i * barH, barH, 2 * Math.PI, false)
+                    //canvasCtx.fill();
                 }
             }  
             
@@ -95,17 +152,9 @@
                     this.className = '';
                     e.preventDefault();
 
-                    var file = e.dataTransfer.files[0],
-                        reader = new FileReader();
-                        
-                    reader.onload = function (event) {                       
-                        audio.src = event.target.result;
-                        
-                        // restart the analyser and sound src
-                        audio.play();
-                    };
+                    var files = e.dataTransfer.files;
                     
-                    reader.readAsDataURL(file);
+                    parseID3v1(files)
 
                     return false;
                 };
@@ -113,7 +162,7 @@
             
             resizeCanvas();
             attachDragDropEventListeners()
-            audio.play();
+            audio.addEventListener('ended', function () { nextSong(); });
             renderFrame();
         };
         
@@ -125,34 +174,159 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            barH = canvas.height / 255;
+            barH = canvas.height / 256;
+        }
+        
+        // read file then set source
+        function readSong(file, md) {
+            var audio = document.getElementById('audio');
+            var reader = new FileReader();
+                
+            reader.onload = function (event) {
+                // add to queue
+                queue.push({dataURL: event.target.result, metadata: md, filename: file.name});
+                console.log('song queued: ' + md.title);
+                
+                // if not already playing, play song.
+                if (!playing && queue.length > 0) {
+                    audio.src = queue[current].dataURL;
+                    updateMetaData(queue[current].metadata);
+                    audio.play();
+                    playing = true;
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        // update metadata
+        function updateMetaData(md) {
+            document.getElementById('metadata').innerHTML = '';
+            if (md.title !== '') {
+                document.getElementById('metadata').innerHTML = '&#9835; ' + md.title + ' by ' + md.artist;
+            }
+        }
+        
+        // move to next song
+        function nextSong() {
+            if (queue.length-1 > current) {
+                audio.pause();
+                current++;
+                audio.src = queue[current].dataURL;
+                updateMetaData(queue[current].metadata);
+                audio.play();
+            }
+            else {
+                playing = false;
+            }
+        }
+        
+        // move to previous song
+        function prevSong() {
+            if (0 < current) {
+                audio.pause();
+                current--;
+                audio.src = queue[current].dataURL;
+                updateMetaData(queue[current].metadata);
+                audio.play();
+            }
+            else {
+                playing = false;
+            }
+        }
+        
+        // move to queue index
+        function indexSong(i) {
+            if (-1 < current  && current < queue.length) {
+                audio.pause();
+                current = i;
+                audio.src = queue[current].dataURL;
+                updateMetaData(queue[current].metadata);
+                audio.play();
+            }
+            else {
+                playing = false;
+            }
+        }
+        
+        // read ID3v1
+        function parseID3v1(files) {
+            for (var i = 0; i < files.length; i++) {
+                (function(file) {
+                buffedReader = new FileReader();
+                buffedReader.onload = function (event) {
+                    // read ID3v1 data using jDataView
+                    var dv = new DataView(event.target.result);
+                    var metadata = {
+                        title  : '',
+                        artist : '',
+                        album  : '',
+                        year   : ''
+                    };
+                    
+                    if (dv.getString(3, dv.byteLength - 128) == 'TAG') {
+                        metadata.title  = dv.getString(30, dv.byteLength - 125);
+                        metadata.artist = dv.getString(30, dv.byteLength - 95);
+                        metadata.album  = dv.getString(30, dv.byteLength - 65);
+                        metadata.year   = dv.getString(4, dv.byteLength - 61);
+                    }
+                    else {
+                        // no ID3v1 data
+                    }
+                    
+                    readSong(file, metadata);
+                };
+                
+                buffedReader.readAsArrayBuffer(file);
+                })(files[i]);
+            }
         }
         
         // change the media source via file select
         function changeMediaSrc() {
-            var audio = document.getElementById('audio');
-        
-            // stop the current media src
-            audio.pause();
+            var files = document.getElementById("src-input").files;
             
-            // replace the src
-            var reader = new FileReader();
-
-            reader.onload = function (event) {
-                audio.src = event.target.result;
+            parseID3v1(files)
+        }
+        
+        // show playlist
+        function showPlaylist() {
+            var plc = document.getElementById('pc-playlist');
+            var data = plc.dataset;
+            var pl = document.getElementById('playlist');
+            
+            if (data.plhidden == 'true') {
+                // if font-symbol is a downarrow, show playlist
+                pl.innerHTML = '';
                 
-                // restart the analyser and sound src
-                audio.play();
-            };
-            reader.readAsDataURL(document.getElementById("src-input").files[0]);
+                var plStr = '<ol>';
+                for (var i = 0; i < queue.length; i++) {
+                    plStr += '<li class="playlist-item" onclick="indexSong('+ i +')">' + queue[i].filename + '</li>';
+                }
+                plStr += '</ol>';
+                
+                pl.innerHTML = plStr;
+                
+                plc.innerHTML = '&#9650;';
+                plc.dataset.plhidden = 'false';
+                pl.style.display = 'block';
+            }
+            else {
+                plc.innerHTML = '&#9660;';
+                plc.dataset.plhidden = 'true';
+                pl.style.display = 'none';
+            }
         }
     </script>
 </head>
 
 <body>
     <span id="select-audio" onclick="document.getElementById('src-input').click()">SELECT AUDIO</span>
-    <input id="src-input" type="file" onchange="changeMediaSrc()" />
-    <audio id="audio" src="dorchadas.mp3"></audio>
+    <input id="src-input" type="file" onchange="changeMediaSrc()" multiple />
+    <audio id="audio" src=""></audio>
     <canvas id="viz-canvas"></canvas>
+    <div id="metadata"></div>
+    <div id="player-controls"><span id="pc-prev" onclick="prevSong()">&#9668;PREV</span> <span id="pc-playlist" data-plhidden="true" onclick="showPlaylist()">&#9660;</span> <span id="pc-next" onclick="nextSong()">NEXT&#9658;</span></div>
+    <div id="playlist"></div>
 </body>
 </html>
