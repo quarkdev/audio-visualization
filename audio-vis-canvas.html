@@ -205,6 +205,9 @@
             if (md.title !== '') {
                 document.getElementById('metadata').innerHTML = '&#9835; ' + md.title + ' by ' + md.artist;
             }
+            else {
+                document.getElementById('metadata').innerHTML = '&#9835; ' + queue[current].filename;
+            }
         }
         
         // move to next song
