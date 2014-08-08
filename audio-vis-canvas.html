@@ -9,6 +9,12 @@
             padding: 0;
         }
         
+        #audio {
+            position: fixed;
+            z-index: 10;
+            opacity: 0.5;
+        }
+        
         .bar {
             display: block;
             height: calc(100% / 255);
@@ -51,7 +57,7 @@
         #metadata {
             position: fixed;
             left: 12px;
-            top: 12px;
+            top: 52px;
             z-index: 10;
             font-family: 'Arial Unicode', Arial, sans-serif;
             font-size: 13px;
@@ -62,7 +68,7 @@
             font-family: Arial, sans-serif;
             font-size: 10px;
             left:12px;
-            top: 36px;
+            top: 76px;
             z-index: 10;
         }
         
@@ -326,7 +332,7 @@
 <body>
     <span id="select-audio" onclick="document.getElementById('src-input').click()">SELECT AUDIO</span>
     <input id="src-input" type="file" onchange="changeMediaSrc()" multiple />
-    <audio id="audio" src=""></audio>
+    <audio id="audio" src="" controls></audio>
     <canvas id="viz-canvas"></canvas>
     <div id="metadata"></div>
     <div id="player-controls"><span id="pc-prev" onclick="prevSong()">&#9668;PREV</span> <span id="pc-playlist" data-plhidden="true" onclick="showPlaylist()">&#9660;</span> <span id="pc-next" onclick="nextSong()">NEXT&#9658;</span></div>
