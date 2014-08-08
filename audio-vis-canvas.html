@@ -251,7 +251,7 @@
         
         // move to queue index
         function indexSong(i) {
-            if (-1 < current  && current < queue.length) {
+            if (-1 < i  && i < queue.length) {
                 audio.pause();
                 current = i;
                 audio.src = queue[current].dataURL;
