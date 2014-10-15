@@ -120,6 +120,8 @@
             var audio = document.getElementById('audio');
             var audioSrc = ctx.createMediaElementSource(audio);
             var analyser = ctx.createAnalyser();
+            var rgbo = 0; // RGB Offset
+            var direction = 1; // 0 = fall, 1 = rise;
             
             canvas = document.getElementById('viz-canvas');
             canvasCtx = canvas.getContext('2d');
@@ -143,12 +145,24 @@
                 // render frame based on values in frequencyData
                 // canvas drawing
                 canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
                 for (var i = 0; i < 256; i++) {
-                    canvasCtx.fillStyle = 'rgb('+i+', '+(255 - i)+', 255)';
+                    canvasCtx.fillStyle = 'rgb('+i+', '+(255 - i)+', '+rgbo+')';
                     canvasCtx.fillRect(0, i * barH, window.innerWidth * (frequencyData[i]/255), barH);
-                    //canvasCtx.beginPath();
-                    //canvasCtx.arc(window.innerWidth * (frequencyData[i]/255), i * barH, barH, 2 * Math.PI, false)
-                    //canvasCtx.fill();
+                }
+                
+                if (direction === 1) {
+                    rgbo++;
+                }
+                else {
+                    rgbo--;
+                }
+                
+                if (rgbo === 255) {
+                    direction = 0;
+                }
+                else if (rgbo === 0) {
+                    direction = 1;
                 }
             }  
             
