@@ -123,6 +123,8 @@
             var rgbo = 0; // RGB Offset
             var direction = 1; // 0 = fall, 1 = rise;
             
+            audio.crossOrigin = 'Anonymous';
+            
             canvas = document.getElementById('viz-canvas');
             canvasCtx = canvas.getContext('2d');
             

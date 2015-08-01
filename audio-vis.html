@@ -55,6 +55,8 @@
             var audioSrc = ctx.createMediaElementSource(audio);
             var analyser = ctx.createAnalyser();
             
+            audio.crossOrigin = 'Anonymous';
+            
             // we have to connect the MediaElementSource with the analyser 
             audioSrc.connect(analyser);
             // then connect it to the audio destination
