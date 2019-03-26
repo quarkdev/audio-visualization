@@ -113,9 +113,15 @@
     </style>
     <script type="text/javascript" src="dataview-extra.js"></script>
     <script type="text/javascript">
-        var renderFrame, barH, canvas, canvasCtx, queue = [], current = 0, playing = false;
+        var renderFrame, barH, canvas = null, canvasCtx, queue = [], current = 0, playing = false, ready = false;
     
-        window.onload = function() {
+        var init = function() {
+            if ( ready ) {
+                return;
+            }
+
+            ready = true;
+
             var ctx = new AudioContext();
             var audio = document.getElementById('audio');
             var audioSrc = ctx.createMediaElementSource(audio);
@@ -166,7 +172,7 @@
                 else if (rgbo === 0) {
                     direction = 1;
                 }
-            }  
+            }; 
             
             // attaches drag/drop event to body (for changing src via drag/drop)
             function attachDragDropEventListeners() {
@@ -181,17 +187,21 @@
 
                     var files = e.dataTransfer.files;
                     
-                    parseID3v1(files)
+                    parseID3v1(files);
 
                     return false;
                 };
             }
             
             resizeCanvas();
-            attachDragDropEventListeners()
+            attachDragDropEventListeners();
             audio.addEventListener('ended', function () { nextSong(); });
             renderFrame();
         };
+
+        window.addEventListener('click', function() {
+            init();
+        });
         
         window.onresize = function () {
             resizeCanvas();
@@ -199,9 +209,11 @@
         
         // resize canvas
         function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            barH = canvas.height / 256;
+            if ( canvas ) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                barH = canvas.height / 256;
+            }
         }
         
         // read file then set source

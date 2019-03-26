@@ -47,9 +47,15 @@
     </style>
 
     <script type="text/javascript">
-        var bars, renderFrame, queue = [];
+        var bars, renderFrame, queue = [], ready = false;
     
-        window.onload = function() {
+        var init = function() {
+            if ( ready ) {
+                return;
+            }
+
+            ready = true;
+
             var ctx = new AudioContext();
             var audio = document.getElementById('audio');
             var audioSrc = ctx.createMediaElementSource(audio);
@@ -78,7 +84,7 @@
                 for (var i = 0; i < 256; i++) {
                     bars[i].style.width = window.innerWidth * (frequencyData[i]/255);
                 }
-            }
+            };
             
             // loads the bar(div) elements to be manipulated
             function loadBarElements() {
@@ -117,12 +123,16 @@
                 };
             }
             
-            attachDragDropEventListeners()
+            attachDragDropEventListeners();
             loadBarElements();
             bars = document.getElementsByClassName('bar');
-            audio.play();
+            //audio.play();
             renderFrame();
         };
+
+        window.addEventListener('click', function() {
+            init();
+        });
         
         // change the media source via file select
         function changeMediaSrc() {
@@ -148,7 +158,7 @@
 <body>
     <span id="select-audio" onclick="document.getElementById('src-input').click()">SELECT AUDIO</span>
     <input id="src-input" type="file" onchange="changeMediaSrc()" />
-    <audio id="audio" src="dorchadas.mp3"></audio>
+    <audio id="audio" src=""></audio>
     <div id="bar-container"></div>
 </body>
 </html>
