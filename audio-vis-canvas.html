@@ -110,10 +110,34 @@
             background-color: blue;
             color: #fff;
         }
+        
+        #viz-select {
+            position: fixed;
+            right: 50px;
+            top: 24px;
+            z-index: 10;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            padding: 4px;
+            background-color: rgba(255, 0, 0, 0.50);
+            color: #fff;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        #viz-select:hover {
+            background-color: rgba(255, 0, 0, 1.0);
+        }
+        
+        #viz-select option {
+            background-color: #222;
+            color: #fff;
+        }
     </style>
     <script type="text/javascript" src="dataview-extra.js"></script>
     <script type="text/javascript">
-        var renderFrame, barH, canvas = null, canvasCtx, queue = [], current = 0, playing = false, ready = false;
+        var renderFrame, barH, canvas = null, canvasCtx, queue = [], current = 0, playing = false, ready = false, vizMode = 'bars';
     
         var init = function() {
             if ( ready ) {
@@ -127,7 +151,7 @@
             var audioSrc = ctx.createMediaElementSource(audio);
             var analyser = ctx.createAnalyser();
             var rgbo = 0; // RGB Offset
-            var direction = 1; // 0 = fall, 1 = rise;
+            var rgboAccum = 0; // fractional accumulator for slow cycling
             
             audio.crossOrigin = 'Anonymous';
             
@@ -146,32 +170,67 @@
 
             // we're ready to receive some data!
             // loop
+            // horizontal bars visualization
+            function renderBars(frequencyData) {
+                for (var i = 0; i < 256; i++) {
+                    var hue = ((i / 256) * 360 + rgbo * 1.41) % 360;
+                    canvasCtx.fillStyle = 'hsl('+hue+', 100%, 50%)';
+                    canvasCtx.fillRect(0, i * barH, canvas.width * (frequencyData[i]/255), barH);
+                }
+            }
+            
+            // radial visualization
+            function renderRadial(frequencyData) {
+                var cx = canvas.width / 2;
+                var cy = canvas.height / 2;
+                var maxRadius = Math.min(cx, cy) * 0.85;
+                var baseRadius = maxRadius * 0.15;
+                var barCount = 180;
+                var sliceAngle = (Math.PI * 2) / barCount;
+                
+                canvasCtx.save();
+                canvasCtx.translate(cx, cy);
+                
+                for (var i = 0; i < barCount; i++) {
+                    var freqIndex = Math.floor(i * 256 / barCount);
+                    var amplitude = frequencyData[freqIndex] / 255;
+                    var barLength = amplitude * (maxRadius - baseRadius);
+                    var angle = i * sliceAngle - Math.PI / 2;
+                    
+                    var hue = ((freqIndex / 256) * 360 + rgbo * 1.41) % 360;
+                    canvasCtx.fillStyle = 'hsl('+hue+', 100%, 50%)';
+                    canvasCtx.strokeStyle = 'hsl('+hue+', 100%, 50%)';
+                    canvasCtx.lineWidth = Math.max(1, sliceAngle * baseRadius * 0.8);
+                    
+                    var x1 = Math.cos(angle) * baseRadius;
+                    var y1 = Math.sin(angle) * baseRadius;
+                    var x2 = Math.cos(angle) * (baseRadius + barLength);
+                    var y2 = Math.sin(angle) * (baseRadius + barLength);
+                    
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(x1, y1);
+                    canvasCtx.lineTo(x2, y2);
+                    canvasCtx.stroke();
+                }
+                
+                canvasCtx.restore();
+            }
+            
             renderFrame = function () {
                 requestAnimationFrame(renderFrame);
                 // update data in frequencyData
                 analyser.getByteFrequencyData(frequencyData);
                 // render frame based on values in frequencyData
-                // canvas drawing
                 canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
-                for (var i = 0; i < 256; i++) {
-                    canvasCtx.fillStyle = 'rgb('+i+', '+(255 - i)+', '+rgbo+')';
-                    canvasCtx.fillRect(0, i * barH, window.innerWidth * (frequencyData[i]/255), barH);
+                if (vizMode === 'radial') {
+                    renderRadial(frequencyData);
+                } else {
+                    renderBars(frequencyData);
                 }
                 
-                if (direction === 1) {
-                    rgbo++;
-                }
-                else {
-                    rgbo--;
-                }
-                
-                if (rgbo === 255) {
-                    direction = 0;
-                }
-                else if (rgbo === 0) {
-                    direction = 1;
-                }
+                rgboAccum = (rgboAccum + 0.0625) % 256;
+                rgbo = Math.floor(rgboAccum);
             }; 
             
             // attaches drag/drop event to body (for changing src via drag/drop)
@@ -372,6 +431,10 @@
 
 <body>
     <span id="select-audio" onclick="document.getElementById('src-input').click()">SELECT AUDIO</span>
+    <select id="viz-select" onchange="vizMode = this.value">
+        <option value="bars">Horizontal Bars</option>
+        <option value="radial">Radial</option>
+    </select>
     <input id="src-input" type="file" onchange="changeMediaSrc()" multiple />
     <audio id="audio" src="" controls></audio>
     <canvas id="viz-canvas"></canvas>
