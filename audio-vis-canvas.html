@@ -203,9 +203,9 @@
             init();
         });
         
-        window.onresize = function () {
+        window.addEventListener('resize', function () {
             resizeCanvas();
-        };
+        });
         
         // resize canvas
         function resizeCanvas() {
@@ -221,42 +221,44 @@
             var audio = document.getElementById('audio');
             var reader = new FileReader();
                 
-            reader.onload = function (event) {
-                // add to queue
-                queue.push({dataURL: event.target.result, metadata: md, filename: file.name});
+            reader.onload = function () {
+                // add to queue using object URL (avoids base64 overhead)
+                var objectURL = URL.createObjectURL(file);
+                queue.push({dataURL: objectURL, metadata: md, filename: file.name});
                 console.log('song queued: ' + md.title);
                 
                 // if not already playing, play song.
                 if (!playing && queue.length > 0) {
                     audio.src = queue[current].dataURL;
                     updateMetaData(queue[current].metadata);
-                    audio.play();
+                    audio.play().catch(function() {});
                     playing = true;
                 }
             };
             
-            reader.readAsDataURL(file);
+            reader.readAsArrayBuffer(file);
         }
         
         // update metadata
         function updateMetaData(md) {
-            document.getElementById('metadata').innerHTML = '';
+            var el = document.getElementById('metadata');
             if (md.title !== '') {
-                document.getElementById('metadata').innerHTML = '&#9835; ' + md.title + ' by ' + md.artist;
+                el.textContent = '\u266B ' + md.title + ' by ' + md.artist;
             }
             else {
-                document.getElementById('metadata').innerHTML = '&#9835; ' + queue[current].filename;
+                el.textContent = '\u266B ' + queue[current].filename;
             }
         }
         
         // move to next song
         function nextSong() {
+            var audio = document.getElementById('audio');
             if (queue.length-1 > current) {
                 audio.pause();
                 current++;
                 audio.src = queue[current].dataURL;
                 updateMetaData(queue[current].metadata);
-                audio.play();
+                audio.play().catch(function() {});
             }
             else {
                 playing = false;
@@ -265,12 +267,13 @@
         
         // move to previous song
         function prevSong() {
+            var audio = document.getElementById('audio');
             if (0 < current) {
                 audio.pause();
                 current--;
                 audio.src = queue[current].dataURL;
                 updateMetaData(queue[current].metadata);
-                audio.play();
+                audio.play().catch(function() {});
             }
             else {
                 playing = false;
@@ -279,12 +282,13 @@
         
         // move to queue index
         function indexSong(i) {
+            var audio = document.getElementById('audio');
             if (-1 < i  && i < queue.length) {
                 audio.pause();
                 current = i;
                 audio.src = queue[current].dataURL;
                 updateMetaData(queue[current].metadata);
-                audio.play();
+                audio.play().catch(function() {});
             }
             else {
                 playing = false;
@@ -295,7 +299,7 @@
         function parseID3v1(files) {
             for (var i = 0; i < files.length; i++) {
                 (function(file) {
-                buffedReader = new FileReader();
+                var buffedReader = new FileReader();
                 buffedReader.onload = function (event) {
                     // read ID3v1 data using jDataView
                     var dv = new DataView(event.target.result);
@@ -306,7 +310,7 @@
                         year   : ''
                     };
                     
-                    if (dv.getString(3, dv.byteLength - 128) == 'TAG') {
+                    if (dv.getString(3, dv.byteLength - 128) === 'TAG') {
                         metadata.title  = dv.getString(30, dv.byteLength - 125);
                         metadata.artist = dv.getString(30, dv.byteLength - 95);
                         metadata.album  = dv.getString(30, dv.byteLength - 65);
@@ -328,7 +332,7 @@
         function changeMediaSrc() {
             var files = document.getElementById("src-input").files;
             
-            parseID3v1(files)
+            parseID3v1(files);
         }
         
         // show playlist
@@ -337,24 +341,28 @@
             var data = plc.dataset;
             var pl = document.getElementById('playlist');
             
-            if (data.plhidden == 'true') {
+            if (data.plhidden === 'true') {
                 // if font-symbol is a downarrow, show playlist
                 pl.innerHTML = '';
                 
-                var plStr = '<ol>';
+                var ol = document.createElement('ol');
                 for (var i = 0; i < queue.length; i++) {
-                    plStr += '<li class="playlist-item" onclick="indexSong('+ i +')">' + queue[i].filename + '</li>';
+                    (function(idx) {
+                        var li = document.createElement('li');
+                        li.className = 'playlist-item';
+                        li.textContent = queue[idx].filename;
+                        li.addEventListener('click', function() { indexSong(idx); });
+                        ol.appendChild(li);
+                    })(i);
                 }
-                plStr += '</ol>';
+                pl.appendChild(ol);
                 
-                pl.innerHTML = plStr;
-                
-                plc.innerHTML = '&#9650;';
+                plc.textContent = '\u25B2';
                 plc.dataset.plhidden = 'false';
                 pl.style.display = 'block';
             }
             else {
-                plc.innerHTML = '&#9660;';
+                plc.textContent = '\u25BC';
                 plc.dataset.plhidden = 'true';
                 pl.style.display = 'none';
             }
