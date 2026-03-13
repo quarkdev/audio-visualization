@@ -1,6 +1,6 @@
 ### Audio Visualizer
 
-Simple audio visualization using Javascript and Web Audio API. Currently works only in Google Chrome.
+Simple audio visualization using Javascript and Web Audio API.
 
 ### Instructions
 
